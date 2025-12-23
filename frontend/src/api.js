@@ -17,6 +17,33 @@ export async function apiFetch(path, options = {}) {
     if (res.status === 401) {
         throw new Error("401 Unauthorized (token ausente ou inválido)");
     }
-
     return res;
 }
+
+export const documents = {
+    list: () => apiFetch("/documents/"),
+    upload: (formData) => apiFetch("/documents/", {
+        method: "POST",
+        body: formData,
+    }),
+    delete: (id) => apiFetch(`/documents/${id}`, { method: "DELETE" }),
+};
+
+export const tenants = {
+    list: () => apiFetch("/tenants/"),
+};
+
+export const clients = {
+    list: (query) => apiFetch(`/clients/${query ? `?q=${query}` : ""}`),
+    create: (data) => apiFetch("/clients/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+    }),
+    update: (id, data) => apiFetch(`/clients/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+    }),
+    delete: (id) => apiFetch(`/clients/${id}`, { method: "DELETE" }),
+};
