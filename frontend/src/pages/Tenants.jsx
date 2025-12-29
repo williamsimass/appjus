@@ -100,17 +100,19 @@ export default function TenantsPage() {
                 <div className="w-full grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
                     {tenants.map(tenant => (
                         <Card key={tenant.id} className="text-left hover:shadow-md transition-shadow relative group">
-                            <CardHeader className="flex flex-row items-center justify-between pb-2">
-                                <CardTitle className="text-base font-bold text-slate-800 pr-8">
-                                    {tenant.name}
-                                </CardTitle>
-                                <Badge variant={tenant.status === 'active' ? 'default' : 'secondary'}>
-                                    {tenant.status}
-                                </Badge>
+                            <CardHeader className="flex flex-row items-start justify-between pb-2 space-y-0">
+                                <div className="space-y-1">
+                                    <CardTitle className="text-base font-bold text-slate-800">
+                                        {tenant.name}
+                                    </CardTitle>
+                                    <Badge variant={tenant.status === 'active' ? 'default' : 'secondary'}>
+                                        {tenant.status}
+                                    </Badge>
+                                </div>
                                 <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:text-red-700 hover:bg-red-50"
+                                    className="text-slate-400 hover:text-red-600 hover:bg-red-50 -mr-2 -mt-2"
                                     onClick={(e) => { e.stopPropagation(); handleDeleteTenant(tenant.id); }}
                                     title="Excluir Escritório"
                                 >

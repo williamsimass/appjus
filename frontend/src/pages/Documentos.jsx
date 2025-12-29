@@ -185,6 +185,36 @@ export default function DocumentosPage() {
         setSelectedTenantId('')
     }
 
+    const handleViewDocument = async (doc) => {
+        try {
+            const blob = await documents.download(doc.id)
+            const url = window.URL.createObjectURL(blob)
+            window.open(url, '_blank')
+            // Cleanup blob url after a delay to ensure it opened
+            setTimeout(() => window.URL.revokeObjectURL(url), 1000)
+        } catch (error) {
+            console.error("Failed to view document", error)
+            alert("Erro ao visualizar documento.")
+        }
+    }
+
+    const getFileIcon = (mimeType, name) => {
+        // Fallback checks on extension if mimeType is generic or missing
+        const lowerName = name?.toLowerCase() || ''
+
+        if (mimeType?.includes('pdf') || lowerName.endsWith('.pdf')) {
+            return <FileIcon className="h-5 w-5 text-red-500" />
+        }
+        if (mimeType?.includes('word') || lowerName.endsWith('.doc') || lowerName.endsWith('.docx')) {
+            return <FileText className="h-5 w-5 text-blue-500" />
+        }
+        if (mimeType?.includes('image') || (['.jpg', '.jpeg', '.png'].some(ext => lowerName.endsWith(ext)))) {
+            return <ImageIcon className="h-5 w-5 text-purple-500" />
+        }
+
+        return <FileType className="h-5 w-5 text-slate-400" />
+    }
+
     // Format bytes to human readable
     const formatBytes = (bytes, decimals = 2) => {
         if (!+bytes) return '0 Bytes'
@@ -193,23 +223,6 @@ export default function DocumentosPage() {
         const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB']
         const i = Math.floor(Math.log(bytes) / Math.log(k))
         return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`
-    }
-
-    const getFileIcon = (mimeType, name) => {
-        // Fallback checks on extension if mimeType is generic or missing
-        const lowerName = name?.toLowerCase() || ''
-
-        if (mimeType?.includes('pdf') || lowerName.endsWith('.pdf')) {
-            return <FileIcon className="h-8 w-8 text-red-500" />
-        }
-        if (mimeType?.includes('word') || lowerName.endsWith('.doc') || lowerName.endsWith('.docx')) {
-            return <FileText className="h-8 w-8 text-blue-500" />
-        }
-        if (mimeType?.includes('image') || (['.jpg', '.jpeg', '.png'].some(ext => lowerName.endsWith(ext)))) {
-            return <ImageIcon className="h-8 w-8 text-purple-500" /> // Using Purple/Green as requested
-        }
-
-        return <FileType className="h-8 w-8 text-slate-400" />
     }
 
     return (
@@ -227,35 +240,53 @@ export default function DocumentosPage() {
                     <Button onClick={() => setIsModalOpen(true)}>Enviar primeiro arquivo</Button>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 w-full text-left">
-                    {docs.map((doc) => (
-                        <Card key={doc.id} className="relative group p-4 hover:shadow-md transition-shadow flex items-start space-x-4 border-slate-200">
-                            <div className="p-2 bg-slate-50 rounded-lg">
-                                {getFileIcon(doc.type || doc.mime_type, doc.name || doc.file_name)}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-slate-900 truncate" title={doc.name || doc.file_name}>
-                                    {doc.name || doc.file_name}
-                                </p>
-                                <p className="text-xs text-slate-500 mt-1">
-                                    {formatBytes(doc.size || doc.file_size)} • {new Date(doc.created_at).toLocaleDateString()}
-                                </p>
-                                {isSuperAdmin && doc.tenant_id && (
-                                    <p className="text-[10px] text-slate-400 mt-0.5 truncate">
-                                        Tenant: {doc.tenant_id}
-                                        {/* Ideally we map tenant_id to name if available */}
-                                    </p>
-                                )}
-                            </div>
-                            <button
-                                onClick={() => handleDelete(doc.id)}
-                                className="opacity-0 group-hover:opacity-100 p-2 text-slate-400 hover:text-red-600 transition-opacity"
-                                title="Excluir"
-                            >
-                                <Trash2 className="h-4 w-4" />
-                            </button>
-                        </Card>
-                    ))}
+                <div className="w-full bg-white rounded-lg shadow border border-slate-200 overflow-hidden">
+                    <table className="w-full text-left text-sm">
+                        <thead className="bg-slate-50 border-b border-slate-200">
+                            <tr>
+                                <th className="px-4 py-3 font-medium text-slate-700 w-12">#</th>
+                                <th className="px-4 py-3 font-medium text-slate-700">Nome do Arquivo</th>
+                                <th className="px-4 py-3 font-medium text-slate-700 w-32">Tamanho</th>
+                                <th className="px-4 py-3 font-medium text-slate-700 w-32">Data</th>
+                                {isSuperAdmin && <th className="px-4 py-3 font-medium text-slate-700 w-48">Tenant</th>}
+                                <th className="px-4 py-3 font-medium text-slate-700 w-16">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                            {docs.map((doc) => (
+                                <tr key={doc.id} className="group hover:bg-slate-50 transition-colors">
+                                    <td className="px-4 py-3 text-center">
+                                        {getFileIcon(doc.type || doc.mime_type, doc.name || doc.file_name)}
+                                    </td>
+                                    <td className="px-4 py-3">
+                                        <button
+                                            onClick={() => handleViewDocument(doc)}
+                                            className="text-slate-900 font-medium hover:text-blue-600 hover:underline text-left truncate max-w-xs block"
+                                            title="Clique para visualizar"
+                                        >
+                                            {doc.name || doc.file_name}
+                                        </button>
+                                    </td>
+                                    <td className="px-4 py-3 text-slate-500">{formatBytes(doc.size || doc.file_size)}</td>
+                                    <td className="px-4 py-3 text-slate-500">{new Date(doc.created_at).toLocaleDateString()}</td>
+                                    {isSuperAdmin && (
+                                        <td className="px-4 py-3 text-slate-400 text-xs truncate max-w-[150px]" title={doc.tenant_id}>
+                                            {doc.tenant_id}
+                                        </td>
+                                    )}
+                                    <td className="px-4 py-3 text-right">
+                                        <button
+                                            onClick={() => handleDelete(doc.id)}
+                                            className="p-2 text-slate-400 hover:text-red-600 transition-colors rounded-full hover:bg-red-50"
+                                            title="Excluir"
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
                 </div>
             )}
 

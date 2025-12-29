@@ -4,7 +4,7 @@ import LoginPage from "@/pages/Login"
 import { DashboardLayout } from "@/layouts/DashboardLayout"
 import DashboardPage from "@/pages/Dashboard"
 import ProcessosPage from "@/pages/Processos"
-import CaseDetailsPage from "@/pages/CaseDetails"
+import ProcessoDetalhesPage from "@/pages/ProcessoDetalhes"
 import DocumentosPage from "@/pages/Documentos"
 import ContratosPage from "@/pages/Contratos"
 import PecasProcessuaisPage from "@/pages/PecasProcessuais"
@@ -70,7 +70,7 @@ function App() {
             }>
               <Route index element={<DashboardPage />} />
               <Route path="processos" element={<ProcessosPage />} />
-              <Route path="processos/:id" element={<CaseDetailsPage />} />
+              <Route path="processos/:id" element={<ProcessoDetalhesPage />} />
               <Route path="documentos" element={<DocumentosPage />} />
               <Route path="contratos" element={<ContratosPage />} />
               <Route path="pecas" element={<PecasProcessuaisPage />} />

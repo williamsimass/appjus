@@ -27,8 +27,8 @@ export function Sidebar() {
     return (
         <aside className="w-64 bg-slate-900 text-white flex flex-col hidden md:flex">
             <div className="p-6 flex items-center gap-2 border-b border-slate-800">
-                <div className="h-8 w-8 bg-accent rounded-lg flex items-center justify-center font-bold text-white">J</div>
-                <span className="font-bold text-lg tracking-tight">JuridicoSaaS</span>
+                <div className="h-8 w-8 bg-accent rounded-lg flex items-center justify-center font-bold text-white">A</div>
+                <span className="font-bold text-lg tracking-tight">AppJUS</span>
             </div>
 
             <nav className="flex-1 p-4 space-y-1 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
