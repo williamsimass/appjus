@@ -72,6 +72,12 @@ export const cases = {
         body: JSON.stringify(data),
     }),
     delete: (id) => apiFetch(`/cases/${id}`, { method: "DELETE" }),
+    createFromDataJud: (data) => apiFetch("/cases/from-datajud", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+    }),
+    tribunals: () => apiFetch("/cases/tribunals"),
 };
 
 export const contracts = {

@@ -8,6 +8,7 @@ import ProcessoDetalhesPage from "@/pages/ProcessoDetalhes"
 import DocumentosPage from "@/pages/Documentos"
 import ContratosPage from "@/pages/Contratos"
 import PecasProcessuaisPage from "@/pages/PecasProcessuais"
+import IAPage from "@/pages/IA"
 import ClientesPage from "@/pages/Clientes"
 import AgendaPage from "@/pages/Agenda"
 import ConfiguracoesPage from "@/pages/Configuracoes"
@@ -16,6 +17,7 @@ import UsersPage from "@/pages/Users"
 import ProtectedRoute from "@/components/ProtectedRoute"
 import { AuthProvider } from "@/contexts/AuthContext"
 import AdminRoute from "@/components/AdminRoute"
+import { Toaster } from "@/components/ui/toaster"
 
 class SimpleErrorBoundary extends React.Component {
   constructor(props) {
@@ -74,6 +76,7 @@ function App() {
               <Route path="documentos" element={<DocumentosPage />} />
               <Route path="contratos" element={<ContratosPage />} />
               <Route path="pecas" element={<PecasProcessuaisPage />} />
+              <Route path="ia" element={<IAPage />} />
               <Route path="clientes" element={<ClientesPage />} />
               <Route path="agenda" element={<AgendaPage />} />
               <Route path="configuracoes" element={<ConfiguracoesPage />} />
@@ -92,6 +95,7 @@ function App() {
 
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
           </Routes>
+          <Toaster />
         </AuthProvider>
       </Router>
     </SimpleErrorBoundary>

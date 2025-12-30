@@ -44,8 +44,18 @@ const Login = () => {
             });
 
             if (!response.ok) {
-                const errText = await response.text();
-                throw new Error(`HTTP ${response.status}: ${errText}`);
+                let errorMessage = 'Falha no login';
+                try {
+                    const errorData = await response.json();
+                    if (errorData.detail) {
+                        errorMessage = errorData.detail;
+                    }
+                } catch (e) {
+                    // If not JSON, use text or default message
+                    const textError = await response.text();
+                    if (textError) errorMessage = textError;
+                }
+                throw new Error(errorMessage);
             }
 
             const data = await response.json();

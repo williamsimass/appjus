@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, Users, FileText, Settings, Scale, Briefcase, Calendar, Building, LogOut } from 'lucide-react'
+import { LayoutDashboard, Users, FileText, Settings, Scale, Briefcase, Calendar, Building, LogOut, Bot } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/contexts/AuthContext'
 
@@ -7,8 +7,9 @@ const navItems = [
     { icon: LayoutDashboard, label: 'Dashboard', href: '/dashboard' },
     { icon: Scale, label: 'Processos', href: '/dashboard/processos' },
     { icon: FileText, label: 'Documentos', href: '/dashboard/documentos' },
-    { icon: FileText, label: 'Contratos + IA', href: '/dashboard/contratos' },
+    { icon: FileText, label: 'Contratos', href: '/dashboard/contratos' },
     { icon: Briefcase, label: 'Peças Processuais', href: '/dashboard/pecas' },
+    { icon: Bot, label: 'IA', href: '/dashboard/ia' },
     { icon: Users, label: 'Clientes', href: '/dashboard/clientes' },
     { icon: Calendar, label: 'Agenda & Prazos', href: '/dashboard/agenda' },
     { icon: Settings, label: 'Configurações', href: '/dashboard/configuracoes' },
@@ -26,9 +27,10 @@ export function Sidebar() {
 
     return (
         <aside className="w-64 bg-slate-900 text-white flex flex-col hidden md:flex">
-            <div className="p-6 flex items-center gap-2 border-b border-slate-800">
-                <div className="h-8 w-8 bg-accent rounded-lg flex items-center justify-center font-bold text-white">A</div>
-                <span className="font-bold text-lg tracking-tight">AppJUS</span>
+            <div className="p-6 flex items-center justify-center border-b border-slate-800">
+                {/* <div className="h-8 w-8 bg-accent rounded-lg flex items-center justify-center font-bold text-white">A</div>
+                <span className="font-bold text-lg tracking-tight">AppJUS</span> */}
+                <img src="/logo.png" alt="AppJUS" className="h-10 w-auto" />
             </div>
 
             <nav className="flex-1 p-4 space-y-1 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">

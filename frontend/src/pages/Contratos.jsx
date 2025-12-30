@@ -144,14 +144,29 @@ export default function ContratosPage() {
                         </div>
                         <div className="space-y-2">
                             <Label>Arquivo (PDF/DOC)</Label>
-                            <div className="relative border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-slate-50 transition-colors">
+                            <label className="relative border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-slate-50 transition-colors bg-white">
                                 <Upload className="h-8 w-8 text-slate-400 mb-2" />
-                                <span className="text-sm text-slate-600">Clique para selecionar</span>
-                                <input type="file" name="file" accept=".pdf,.doc,.docx" required className="opacity-0 absolute inset-0 w-full h-full cursor-pointer" />
-                            </div>
+                                <span className="text-sm text-slate-600 font-medium">
+                                    {uploading ? 'Enviando...' : 'Clique para selecionar o arquivo'}
+                                </span>
+                                <span className="text-xs text-slate-400 mt-1">PDF, DOC ou DOCX (Max 10MB)</span>
+                                <input
+                                    type="file"
+                                    name="file"
+                                    accept=".pdf,.doc,.docx"
+                                    required
+                                    className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
+                                    onChange={(e) => {
+                                        if (e.target.files[0]) {
+                                            const span = e.target.parentElement.querySelector('span.text-slate-600');
+                                            if (span) span.innerText = e.target.files[0].name;
+                                        }
+                                    }}
+                                />
+                            </label>
                         </div>
                         <DialogFooter>
-                            <Button type="submit" disabled={uploading}>
+                            <Button type="submit" disabled={uploading} className="bg-blue-600 hover:bg-blue-700 text-white">
                                 {uploading ? 'Enviando...' : 'Fazer Upload'}
                             </Button>
                         </DialogFooter>

@@ -5,23 +5,31 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { Badge } from '@/components/ui/badge'
 import { apiFetch, cases } from '@/api'
 import { Button } from '@/components/ui/button'
-import { Edit, Trash2, Archive, ArchiveRestore, MoreVertical } from 'lucide-react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { Edit, Trash2, Archive, ArchiveRestore, MoreVertical, Search, Globe, Clock, AlertCircle, Eye } from 'lucide-react'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 export default function ProcessosPage() {
     const navigate = useNavigate()
     const [caseList, setCaseList] = useState([])
     const [clients, setClients] = useState([])
+    const [tribunals, setTribunals] = useState([])
     const [loading, setLoading] = useState(true)
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [editingId, setEditingId] = useState(null)
+    const [activeTab, setActiveTab] = useState("manual")
+
     const [formData, setFormData] = useState({
         number: '',
         court: '',
         status: 'open',
         next_deadline: '',
-        client_id: ''
+        client_id: '',
+        tribunal_index: ''
     })
 
     useEffect(() => {
@@ -30,9 +38,10 @@ export default function ProcessosPage() {
 
     const fetchInitialData = async () => {
         try {
-            const [casesRes, clientsRes] = await Promise.all([
+            const [casesRes, clientsRes, tribunalsRes] = await Promise.all([
                 cases.list(),
-                apiFetch('/clients/')
+                apiFetch('/clients/'),
+                cases.tribunals().catch(() => ({ ok: false }))
             ])
 
             if (casesRes.ok) {
@@ -43,6 +52,10 @@ export default function ProcessosPage() {
                 const data = await clientsRes.json()
                 setClients(data)
             }
+            if (tribunalsRes && tribunalsRes.ok) {
+                const data = await tribunalsRes.json()
+                setTribunals(data)
+            }
         } catch (error) {
             console.error("Erro ao buscar dados", error)
         } finally {
@@ -50,17 +63,52 @@ export default function ProcessosPage() {
         }
     }
 
+    const formatCNJ = (value) => {
+        if (!value) return ""
+        // Remove non-digits
+        const v = value.replace(/\D/g, "")
+        // Mask: 0000000-00.0000.0.00.0000
+        //       7d    -2d.4d  .1.2d.4d
+        // Max 20 chars
+
+        let r = v
+        if (r.length > 20) r = r.substring(0, 20)
+
+        // Apply mask progressively
+        // 0000000-
+        if (r.length > 7) r = r.substring(0, 7) + "-" + r.substring(7)
+        // 0000000-00.
+        if (r.length > 10) r = r.substring(0, 10) + "." + r.substring(10)
+        // 0000000-00.0000.
+        if (r.length > 15) r = r.substring(0, 15) + "." + r.substring(15)
+        // 0000000-00.0000.0.
+        if (r.length > 17) r = r.substring(0, 17) + "." + r.substring(17)
+        // 0000000-00.0000.0.00.
+        if (r.length > 20) r = r.substring(0, 20) + "." + r.substring(20)
+
+        return r
+    }
+
     const openCreate = () => {
         setEditingId(null)
-        setFormData({ number: '', court: '', status: 'open', next_deadline: '', client_id: '' })
+        setActiveTab("manual")
+        setFormData({
+            number: '',
+            court: '',
+            status: 'open',
+            next_deadline: '',
+            client_id: '',
+            tribunal_index: ''
+        })
         setIsModalOpen(true)
     }
 
     const openEdit = (c, e) => {
         e.stopPropagation()
         setEditingId(c.id)
+        setActiveTab("manual") // Always manual for editing existing fields
         setFormData({
-            number: c.number,
+            number: formatCNJ(c.number),
             court: c.court,
             status: c.status,
             next_deadline: c.next_deadline ? c.next_deadline.split('T')[0] : '',
@@ -85,19 +133,36 @@ export default function ProcessosPage() {
     }
 
     const handleSave = async () => {
-        if (!formData.number || !formData.client_id) return alert("Preencha campos obrigatórios")
-
-        const payload = {
-            ...formData,
-            next_deadline: formData.next_deadline ? new Date(formData.next_deadline).toISOString() : null
-        }
+        if (!formData.client_id) return alert("Selecione um cliente")
+        if (!formData.number) return alert("Informe o número do processo")
 
         try {
             let res;
             if (editingId) {
+                const payload = {
+                    ...formData,
+                    number: formData.number.replace(/\D/g, ''), // Send clean
+                    next_deadline: formData.next_deadline ? new Date(formData.next_deadline).toISOString() : null
+                }
                 res = await cases.update(editingId, payload)
             } else {
-                res = await cases.createForClient(formData.client_id, payload)
+                if (activeTab === 'datajud') {
+                    // Create via DataJud
+                    const payload = {
+                        client_id: formData.client_id,
+                        number: formData.number.replace(/\D/g, '')
+                    }
+                    res = await cases.createFromDataJud(payload)
+                } else {
+                    // Manual Create
+                    const payload = {
+                        ...formData,
+                        number: formData.number.replace(/\D/g, ''), // Send clean
+                        next_deadline: formData.next_deadline ? new Date(formData.next_deadline).toISOString() : null
+                    }
+                    delete payload.tribunal_index
+                    res = await cases.createForClient(formData.client_id, payload)
+                }
             }
 
             if (!res.ok) {
@@ -112,6 +177,11 @@ export default function ProcessosPage() {
             console.error(err)
             alert(`Erro ao salvar: ${err.message}`)
         }
+    }
+
+    const openExternal = (url, e) => {
+        e.stopPropagation()
+        if (url) window.open(url, '_blank')
     }
 
     return (
@@ -129,7 +199,7 @@ export default function ProcessosPage() {
                         placeholder="Buscar processos..."
                         className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-slate-600"
                     />
-                    <svg className="w-5 h-5 text-slate-400 absolute left-3 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    <Search className="w-5 h-5 text-slate-400 absolute left-3 top-3" />
                 </div>
             </div>
 
@@ -153,7 +223,13 @@ export default function ProcessosPage() {
                 ) : (
                     <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                         {caseList.map(item => (
-                            <div key={item.id} className="group relative bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col overflow-hidden cursor-pointer" onClick={() => navigate(`/dashboard/processos/${item.id}`)}>
+                            <div key={item.id} className="group relative bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col overflow-hidden cursor-pointer h-full" onClick={(e) => {
+                                if (item.external_url) openExternal(item.external_url, e);
+                                else {
+                                    navigator.clipboard.writeText(item.number)
+                                    // Could add toast here
+                                }
+                            }}>
                                 <div className="p-5 flex-1 flex flex-col">
                                     <div className="flex justify-between items-start mb-4">
                                         <Badge variant="secondary" className={`px-2.5 py-0.5 rounded-md font-medium text-xs ${item.status === 'open'
@@ -173,6 +249,9 @@ export default function ProcessosPage() {
                                                 </button>
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end" className="w-48 shadow-xl border-slate-100">
+                                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/dashboard/processos/${item.id}`) }} className="text-slate-600 focus:bg-slate-50 py-2">
+                                                    <Eye className="w-4 h-4 mr-2" /> Detalhes
+                                                </DropdownMenuItem>
                                                 <DropdownMenuItem onClick={(e) => openEdit(item, e)} className="text-slate-600 focus:bg-slate-50 py-2">
                                                     <Edit className="w-4 h-4 mr-2" /> Editar
                                                 </DropdownMenuItem>
@@ -188,24 +267,61 @@ export default function ProcessosPage() {
                                     </div>
 
                                     <h3 className="text-lg font-bold text-slate-900 mb-1 leading-snug truncate" title={item.number}>
-                                        {item.number}
+                                        {item.formatted_number || formatCNJ(item.number)}
                                     </h3>
-                                    <p className="text-sm text-slate-500 font-medium truncate mb-6" title={item.court}>
-                                        {item.court || 'Tribunal não informado'}
+                                    <p className="text-xs text-slate-500 mb-3 truncate font-medium">
+                                        {item.system_name || item.court || 'Tribunal não informado'}
                                     </p>
 
-                                    <div className="mt-auto pt-4 border-t border-slate-50 flex items-center justify-between text-sm">
-                                        <div className="flex items-center text-slate-500">
-                                            <span className="font-medium mr-2 text-xs uppercase tracking-wide text-slate-400">Prazo</span>
-                                            {item.next_deadline ? (
+                                    {/* DataJud Info */}
+                                    <div className="space-y-2 mt-1">
+                                        {item.court_name && (
+                                            <div className="text-xs text-slate-600 truncate" title={item.court_name}>
+                                                <span className="font-semibold text-slate-700">Vara:</span> {item.court_name}
+                                            </div>
+                                        )}
+
+                                        {item.main_subject && (
+                                            <div className="text-xs text-slate-600 truncate" title={item.main_subject}>
+                                                <span className="font-semibold text-slate-700">Assunto:</span> {item.main_subject}
+                                            </div>
+                                        )}
+
+                                        <div className="bg-slate-50 p-2.5 rounded-md border border-slate-100 mt-2">
+                                            <div className="flex items-center justify-between mb-1">
+                                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Última Movimentação</span>
+                                                {item.last_update && (
+                                                    <span className="text-[10px] text-slate-500 flex items-center">
+                                                        <Clock className="w-3 h-3 mr-1" />
+                                                        {new Date(item.last_update).toLocaleDateString()}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div className="text-xs font-medium text-slate-800 line-clamp-2" title={item.last_update_label || item.last_movement_title}>
+                                                {item.last_update_label || item.last_movement_title || "Sem movimentações recentes"}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Deadline Section */}
+                                    {item.next_deadline && (
+                                        <div className="mt-auto pt-3 border-t border-slate-50 flex items-center justify-between text-sm mt-3">
+                                            <div className="flex items-center text-slate-500">
+                                                <span className="font-medium mr-2 text-xs uppercase tracking-wide text-slate-400">Prazo Interno</span>
                                                 <span className={new Date(item.next_deadline) < new Date() ? 'text-red-600 font-semibold' : 'text-slate-700'}>
                                                     {new Date(item.next_deadline).toLocaleDateString()}
                                                 </span>
-                                            ) : (
-                                                '—'
-                                            )}
+                                            </div>
                                         </div>
-                                    </div>
+                                    )}
+
+                                    {item.external_url && (
+                                        <div className={`mt-auto pt-3 border-t border-slate-50 flex justify-end ${item.next_deadline ? 'mt-3 border-none pt-0' : ''}`}>
+                                            <div className="flex items-center gap-1 text-xs text-blue-600 font-medium group-hover:underline">
+                                                Abrir Processo <Globe className="w-3 h-3" />
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                                 <div className="h-1 w-full bg-gradient-to-r from-transparent via-blue-500/0 to-transparent group-hover:via-blue-500/50 transition-all duration-500" />
                             </div>
@@ -215,53 +331,111 @@ export default function ProcessosPage() {
             }
 
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-                <DialogContent>
+                <DialogContent className="max-w-lg">
                     <DialogHeader>
                         <DialogTitle>{editingId ? 'Editar Processo' : 'Novo Processo'}</DialogTitle>
+                        <DialogDescription>
+                            Preencha os dados do processo abaixo.
+                        </DialogDescription>
                     </DialogHeader>
-                    <div className="space-y-4">
+
+                    {!editingId ? (
+                        <Tabs defaultValue="manual" value={activeTab} onValueChange={setActiveTab} className="w-full">
+                            <TabsList className="grid w-full grid-cols-2 mb-4">
+                                <TabsTrigger value="manual">Manual</TabsTrigger>
+                                <TabsTrigger value="datajud">Importar DataJud</TabsTrigger>
+                            </TabsList>
+
+                            {/* Manual Form Content is shared below but we customize fields visibility based on tab in a simple way or keeping state clean */}
+                        </Tabs>
+                    ) : null}
+
+                    <div className="space-y-4 py-2">
                         <div>
-                            <label className="text-sm font-medium">Cliente</label>
+                            <Label>Cliente</Label>
                             <select
-                                className="w-full p-2 border rounded mt-1 bg-white"
+                                className="w-full h-10 px-3 py-2 border rounded-md mt-1 bg-white text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                                 value={formData.client_id}
-                                disabled={!!editingId} // Disable client change on edit usually safer
+                                disabled={!!editingId}
                                 onChange={e => setFormData({ ...formData, client_id: e.target.value })}
                             >
-                                <option value="">Selecione...</option>
+                                <option value="">Selecione um cliente...</option>
                                 {clients.map(c => (
                                     <option key={c.id} value={c.id}>{c.name}</option>
                                 ))}
                             </select>
                         </div>
-                        <div>
-                            <label className="text-sm font-medium">Número</label>
-                            <input className="w-full p-2 border rounded mt-1" value={formData.number} onChange={e => setFormData({ ...formData, number: e.target.value })} />
-                        </div>
-                        <div>
-                            <label className="text-sm font-medium">Tribunal</label>
-                            <input className="w-full p-2 border rounded mt-1" value={formData.court} onChange={e => setFormData({ ...formData, court: e.target.value })} />
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="text-sm font-medium">Status</label>
-                                <select className="w-full p-2 border rounded mt-1 bg-white" value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value })}>
-                                    <option value="open">Aberto</option>
-                                    <option value="archived">Arquivado</option>
-                                    <option value="suspended">Suspenso</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label className="text-sm font-medium">Próximo Prazo</label>
-                                <input type="date" className="w-full p-2 border rounded mt-1" value={formData.next_deadline} onChange={e => setFormData({ ...formData, next_deadline: e.target.value })} />
-                            </div>
-                        </div>
+
+                        {activeTab === 'manual' || editingId ? (
+                            <>
+                                <div>
+                                    <Label>Número do Processo</Label>
+                                    <Input
+                                        value={formatCNJ(formData.number)}
+                                        onChange={e => setFormData({ ...formData, number: e.target.value })}
+                                        placeholder="0000000-00.0000.0.00.0000"
+                                    />
+                                </div>
+                                <div>
+                                    <Label>Tribunal / Vara</Label>
+                                    <Input
+                                        value={formData.court}
+                                        onChange={e => setFormData({ ...formData, court: e.target.value })}
+                                        placeholder="Ex: TJSP - 1ª Vara Cível"
+                                    />
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <Label>Status</Label>
+                                        <select
+                                            className="w-full h-10 px-3 py-2 border rounded-md mt-1 bg-white text-sm"
+                                            value={formData.status}
+                                            onChange={e => setFormData({ ...formData, status: e.target.value })}
+                                        >
+                                            <option value="open">Aberto</option>
+                                            <option value="archived">Arquivado</option>
+                                            <option value="suspended">Suspenso</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <Label>Próximo Prazo</Label>
+                                        <Input
+                                            type="date"
+                                            value={formData.next_deadline}
+                                            onChange={e => setFormData({ ...formData, next_deadline: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
+                            </>
+                        ) : (
+                            // DataJud Tab Content
+                            <>
+                                <div>
+                                    <Label>Número CNJ (apenas números)</Label>
+                                    <Input
+                                        value={formatCNJ(formData.number)}
+                                        onChange={e => setFormData({ ...formData, number: e.target.value })}
+                                        placeholder="Ex: 1234567-89.2023.8.26.0100"
+                                        autoFocus
+                                    />
+                                    <p className="text-xs text-slate-500 mt-1">Identificaremos o tribunal automaticamente pelo número.</p>
+                                </div>
+
+                                <div className="bg-blue-50 border border-blue-100 p-3 rounded-md flex gap-3 text-sm text-blue-700">
+                                    <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                                    <p>Buscaremos os dados oficiais no DataJud (CNJ).</p>
+                                </div>
+                            </>
+                        )}
                     </div>
+
                     <DialogFooter>
-                        <Button onClick={handleSave}>Salvar</Button>
+                        <Button variant="outline" onClick={() => setIsModalOpen(false)}>Cancelar</Button>
+                        <Button onClick={handleSave} className="bg-blue-600 hover:bg-blue-700 text-white">Salvar</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
         </PageShell >
     )
 }
+
