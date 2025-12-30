@@ -134,3 +134,22 @@ export const pieces = {
 export const search = {
     query: (q) => apiFetch(`/search/?q=${encodeURIComponent(q)}`),
 };
+
+export const ai = {
+    contracts: {
+        analyze: (id) => apiFetch(`/ai/contracts/${id}/analyze`, { method: "POST" }),
+    },
+    analyses: {
+        list: (sourceId) => apiFetch(`/ai/analyses?source_id=${sourceId}`),
+    },
+    threads: {
+        create: () => apiFetch("/ai/threads", { method: "POST" }),
+        list: () => apiFetch("/ai/threads"),
+        messages: (threadId) => apiFetch(`/ai/threads/${threadId}/messages`),
+        sendMessage: (threadId, content) => apiFetch(`/ai/threads/${threadId}/messages`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ content })
+        }),
+    }
+};
