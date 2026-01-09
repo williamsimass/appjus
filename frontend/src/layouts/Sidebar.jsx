@@ -25,6 +25,14 @@ export function Sidebar() {
         navigate('/login')
     }
 
+    // Filter nav items based on permissions
+    const visibleNavItems = navItems.filter(item => {
+        if (item.label === 'IA') {
+            return user?.allowed_features?.includes('ai')
+        }
+        return true
+    })
+
     return (
         <aside className="w-64 bg-slate-900 text-white flex flex-col hidden md:flex">
             <div className="p-6 flex items-center justify-center border-b border-slate-800">
@@ -34,7 +42,7 @@ export function Sidebar() {
             </div>
 
             <nav className="flex-1 p-4 space-y-1 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
-                {navItems.map((item) => {
+                {visibleNavItems.map((item) => {
                     const isActive = location.pathname === item.href
                     return (
                         <Link
@@ -53,6 +61,7 @@ export function Sidebar() {
                     )
                 })}
 
+                {/* Admin GLobal Section */}
                 {/* Admin GLobal Section */}
                 {(user?.role === 'super_admin' || user?.role === 'admin_global') && (
                     <>
@@ -73,19 +82,23 @@ export function Sidebar() {
                             <Building className="h-5 w-5 text-slate-400 group-hover:text-white" />
                             Escritórios
                         </Link>
-                        <Link
-                            to="/dashboard/users"
-                            className={cn(
-                                "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-all group",
-                                location.pathname === '/dashboard/users'
-                                    ? "bg-accent/10 text-accent"
-                                    : "text-slate-400 hover:bg-slate-800 hover:text-white"
-                            )}
-                        >
-                            <Users className="h-5 w-5 text-slate-400 group-hover:text-white" />
-                            Usuários
-                        </Link>
                     </>
+                )}
+
+                {/* Management Section (Global Admin + Tenant Admin) */}
+                {(user?.role === 'super_admin' || user?.role === 'admin_global' || user?.role === 'tenant_admin') && (
+                    <Link
+                        to="/dashboard/users"
+                        className={cn(
+                            "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-all group",
+                            location.pathname === '/dashboard/users'
+                                ? "bg-accent/10 text-accent"
+                                : "text-slate-400 hover:bg-slate-800 hover:text-white"
+                        )}
+                    >
+                        <Users className="h-5 w-5 text-slate-400 group-hover:text-white" />
+                        Usuários
+                    </Link>
                 )}
             </nav>
 

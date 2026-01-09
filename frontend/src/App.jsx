@@ -17,6 +17,7 @@ import UsersPage from "@/pages/Users"
 import ProtectedRoute from "@/components/ProtectedRoute"
 import { AuthProvider } from "@/contexts/AuthContext"
 import AdminRoute from "@/components/AdminRoute"
+import ManagerRoute from "@/components/ManagerRoute"
 import { Toaster } from "@/components/ui/toaster"
 
 class SimpleErrorBoundary extends React.Component {
@@ -87,9 +88,9 @@ function App() {
                 </AdminRoute>
               } />
               <Route path="users" element={
-                <AdminRoute>
+                <ManagerRoute>
                   <UsersPage />
-                </AdminRoute>
+                </ManagerRoute>
               } />
             </Route>
 

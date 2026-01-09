@@ -35,6 +35,11 @@ export const documents = {
 
 export const tenants = {
     list: () => apiFetch("/tenants/"),
+    updatePlan: (id, data) => apiFetch(`/tenants/${id}/plan`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+    })
 };
 
 export const clients = {

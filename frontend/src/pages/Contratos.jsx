@@ -113,6 +113,12 @@ export default function ContratosPage() {
                                     <Calendar className="w-3 h-3" />
                                     {new Date(c.created_at || Date.now()).toLocaleDateString()}
                                 </div>
+                                {c.has_analysis && (
+                                    <div className="flex items-center text-xs text-emerald-600 gap-1 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100 mt-2 w-fit" title="Contrato analisado pela IA">
+                                        <FileCheck className="w-3 h-3" />
+                                        <span className="font-medium">Analisado</span>
+                                    </div>
+                                )}
                             </CardContent>
                             <CardFooter className="pt-0 flex gap-2 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
                                 <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => handleView(c)} title="Visualizar">

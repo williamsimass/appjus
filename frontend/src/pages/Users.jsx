@@ -5,8 +5,10 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Trash2 } from 'lucide-react'
 import { apiFetch } from '@/api'
+import { useAuth } from '@/contexts/AuthContext'
 
 export default function UsersPage() {
+    const { user: currentUser } = useAuth()
     const [users, setUsers] = useState([])
     const [tenants, setTenants] = useState([])
     const [loading, setLoading] = useState(true)
@@ -19,13 +21,15 @@ export default function UsersPage() {
 
     const fetchInitialData = async () => {
         try {
-            const [usersRes, tenantsRes] = await Promise.all([
-                apiFetch('/users/'),
-                apiFetch('/tenants/')
-            ])
-
+            // Parallel fetch can fail if tenants 403. Separate them.
+            const usersRes = await apiFetch('/users/')
             if (usersRes.ok) setUsers(await usersRes.json())
-            if (tenantsRes.ok) setTenants(await tenantsRes.json())
+
+            // Only fetch tenants if super admin
+            if (currentUser?.role === 'super_admin' || currentUser?.role === 'admin_global') {
+                const tenantsRes = await apiFetch('/tenants/')
+                if (tenantsRes.ok) setTenants(await tenantsRes.json())
+            }
 
         } catch (error) {
             console.error("Erro", error)
@@ -35,18 +39,32 @@ export default function UsersPage() {
     }
 
     const handleCreate = async () => {
-        if (!formData.name || !formData.email || !formData.password || !formData.tenant_id) {
-            alert("Preencha todos os dados")
+        // Validation: tenant_id required only for super_admin
+        const isSuper = (currentUser?.role === 'super_admin' || currentUser?.role === 'admin_global')
+
+        if (!formData.name || !formData.email || !formData.password) {
+            alert("Preencha nome, email e senha")
+            return
+        }
+
+        if (isSuper && !formData.tenant_id) {
+            alert("Selecione o escritório")
             return
         }
 
         try {
+            const payload = { ...formData };
+            // Sanitize tenant_id: empty string "" -> null (required for UUID validation)
+            if (!payload.tenant_id) {
+                payload.tenant_id = null;
+            }
+
             const res = await apiFetch('/users/', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify(formData)
+                body: JSON.stringify(payload)
             })
 
             if (res.ok) {
@@ -109,19 +127,35 @@ export default function UsersPage() {
                                 onChange={e => setFormData({ ...formData, password: e.target.value })}
                             />
                         </div>
-                        <div>
-                            <label className="block text-sm font-medium mb-1">Escritório (Tenant)</label>
-                            <select
-                                className="w-full p-2 border rounded"
-                                value={formData.tenant_id}
-                                onChange={e => setFormData({ ...formData, tenant_id: e.target.value })}
-                            >
-                                <option value="">Selecione...</option>
-                                {tenants.map(t => (
-                                    <option key={t.id} value={t.id}>{t.name}</option>
-                                ))}
-                            </select>
-                        </div>
+
+                        {/* Tenant selection only for Super Admin */}
+                        {(currentUser?.role === 'super_admin' || currentUser?.role === 'admin_global') ? (
+                            <div>
+                                <label className="block text-sm font-medium mb-1">Escritório (Tenant)</label>
+                                <select
+                                    className="w-full p-2 border rounded"
+                                    value={formData.tenant_id}
+                                    onChange={e => setFormData({ ...formData, tenant_id: e.target.value })}
+                                >
+                                    <option value="">Selecione...</option>
+                                    {tenants.map(t => (
+                                        <option key={t.id} value={t.id}>{t.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        ) : (
+                            // For tenant_admin, we don't show the select, but backend infers tenant. 
+                            // Or we show it disabled. Backend ignores input anyway but good for transparency.
+                            <div>
+                                <label className="block text-sm font-medium mb-1">Escritório</label>
+                                <input
+                                    className="w-full p-2 border rounded bg-slate-200"
+                                    value="Meu Escritório"
+                                    disabled
+                                />
+                            </div>
+                        )}
+
                         <div>
                             <label className="block text-sm font-medium mb-1">Permissão</label>
                             <select
@@ -130,7 +164,15 @@ export default function UsersPage() {
                                 onChange={e => setFormData({ ...formData, role: e.target.value })}
                             >
                                 <option value="lawyer">Advogado (Acesso Padrão)</option>
-                                <option value="tenant_admin">Admin do Escritório</option>
+                                <option value="staff">Staff/Paralegal</option>
+
+                                {/* Only Super Admin can create other admins */}
+                                {(currentUser?.role === 'super_admin' || currentUser?.role === 'admin_global') && (
+                                    <>
+                                        <option value="tenant_admin">Admin do Escritório</option>
+                                        <option value="admin_global">Admin Global</option>
+                                    </>
+                                )}
                             </select>
                         </div>
                     </div>

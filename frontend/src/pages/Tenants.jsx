@@ -13,6 +13,10 @@ export default function TenantsPage() {
     const [newTenantName, setNewTenantName] = useState('')
     const [isCreating, setIsCreating] = useState(false)
 
+    const [selectedTenant, setSelectedTenant] = useState(null)
+    const [planForm, setPlanForm] = useState({ plan: 'free', plan_status: 'active' })
+    const [isPlanOpen, setIsPlanOpen] = useState(false)
+
     useEffect(() => {
         fetchTenants()
     }, [])
@@ -65,6 +69,44 @@ export default function TenantsPage() {
         }
     }
 
+    const openPlanModal = (tenant) => {
+        setSelectedTenant(tenant)
+        setPlanForm({
+            plan: tenant.plan || 'free',
+            plan_status: tenant.plan_status || 'active'
+        })
+        setIsPlanOpen(true)
+    }
+
+    const handleUpdatePlan = async () => {
+        if (!selectedTenant) return
+        try {
+            // Assume api.tenants.updatePlan is available or use direct fetch
+            // But let's use the one we just added or fallback
+            // To be safe in this edit if api.js isn't refreshed yet (hot reload handles it usually)
+            // We'll use the one from 'api' module if imported, wait... 
+            // The file imports { apiFetch } from '@/api', better to import tenants object or raw fetch.
+            // Let's use apiFetch directly to be atomic if possible, or assume user refreshes.
+            // Correction: I see 'import { apiFetch } from ...' at top. I should use apiFetch directly for PATCH.
+
+            const res = await apiFetch(`/tenants/${selectedTenant.id}/plan`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(planForm)
+            })
+
+            if (res.ok) {
+                alert('Plano atualizado com sucesso!')
+                setIsPlanOpen(false)
+                fetchTenants()
+            } else {
+                alert('Erro ao atualizar plano')
+            }
+        } catch (error) {
+            alert('Erro de conexão')
+        }
+    }
+
     return (
         <PageShell
             title="Escritórios (Tenants)"
@@ -92,6 +134,52 @@ export default function TenantsPage() {
                     </div>
                 </div>
             )}
+
+            {/* Modal de Plano */}
+            {isPlanOpen && selectedTenant && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+                    <div className="bg-white p-6 rounded-lg w-full max-w-md shadow-xl">
+                        <h3 className="text-lg font-bold mb-4">Gerenciar Plano: {selectedTenant.name}</h3>
+
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium mb-1">Plano</label>
+                                <select
+                                    className="w-full p-2 border rounded"
+                                    value={planForm.plan}
+                                    onChange={e => setPlanForm({ ...planForm, plan: e.target.value })}
+                                >
+                                    <option value="free">Free (Grátis)</option>
+                                    <option value="basic">Basic</option>
+                                    <option value="standard">Standard (Live Updates)</option>
+                                    <option value="advanced">Advanced (AI)</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium mb-1">Status da Assinatura</label>
+                                <select
+                                    className="w-full p-2 border rounded"
+                                    value={planForm.plan_status}
+                                    onChange={e => setPlanForm({ ...planForm, plan_status: e.target.value })}
+                                >
+                                    <option value="active">Ativo</option>
+                                    <option value="inactive">Inativo</option>
+                                    <option value="trial">Trial (Teste)</option>
+                                    <option value="past_due">Atrasado</option>
+                                    <option value="canceled">Cancelado</option>
+                                </select>
+                            </div>
+
+                            <div className="flex justify-end gap-2 mt-4">
+                                <Button variant="outline" onClick={() => setIsPlanOpen(false)}>Cancelar</Button>
+                                <Button onClick={handleUpdatePlan}>Salvar Alterações</Button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {loading ? (
                 <div className="text-center">Carregando...</div>
             ) : tenants.length === 0 ? (
@@ -105,9 +193,18 @@ export default function TenantsPage() {
                                     <CardTitle className="text-base font-bold text-slate-800">
                                         {tenant.name}
                                     </CardTitle>
-                                    <Badge variant={tenant.status === 'active' ? 'default' : 'secondary'}>
-                                        {tenant.status}
-                                    </Badge>
+                                    <div className="flex gap-2">
+                                        <Badge variant={tenant.status === 'active' ? 'default' : 'secondary'}>
+                                            {tenant.status}
+                                        </Badge>
+                                        <Badge variant="outline" className={
+                                            tenant.plan === 'advanced' ? 'border-purple-200 text-purple-700 bg-purple-50' :
+                                                tenant.plan === 'standard' ? 'border-blue-200 text-blue-700 bg-blue-50' :
+                                                    'border-slate-200 text-slate-600'
+                                        }>
+                                            {tenant.plan?.toUpperCase()}
+                                        </Badge>
+                                    </div>
                                 </div>
                                 <Button
                                     variant="ghost"
@@ -120,8 +217,15 @@ export default function TenantsPage() {
                                 </Button>
                             </CardHeader>
                             <CardContent>
-                                <p className="text-sm text-slate-500">Plano: {tenant.plan}</p>
-                                <p className="text-xs text-slate-400 mt-2">Criado em: {new Date(tenant.created_at).toLocaleDateString()}</p>
+                                <div className="flex justify-between items-center mt-2">
+                                    <div className="text-xs text-slate-500">
+                                        <p>Status Assinatura: <span className="font-semibold">{tenant.plan_status}</span></p>
+                                        <p className="mt-1">Criado: {new Date(tenant.created_at).toLocaleDateString()}</p>
+                                    </div>
+                                    <Button size="sm" variant="secondary" onClick={() => openPlanModal(tenant)}>
+                                        Gerenciar Plano
+                                    </Button>
+                                </div>
                             </CardContent>
                         </Card>
                     ))}
@@ -130,3 +234,4 @@ export default function TenantsPage() {
         </PageShell>
     )
 }
+
