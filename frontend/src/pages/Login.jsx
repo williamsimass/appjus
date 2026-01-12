@@ -44,19 +44,23 @@ const Login = () => {
             });
 
             if (!response.ok) {
-                let errorMessage = 'Falha no login';
-                try {
-                    const errorData = await response.json();
-                    if (errorData.detail) {
-                        errorMessage = errorData.detail;
-                    }
-                } catch (e) {
-                    // If not JSON, use text or default message
-                    const textError = await response.text();
-                    if (textError) errorMessage = textError;
+            let errorMessage = 'Falha no login';
+            
+            // Lemos como texto primeiro para não "quebrar" o stream
+            const responseText = await response.text(); 
+            
+            try {
+                // Tentamos converter o texto para objeto JSON
+                const errorData = JSON.parse(responseText);
+                if (errorData.detail) {
+                    errorMessage = errorData.detail;
                 }
-                throw new Error(errorMessage);
+            } catch (e) {
+                // Se não for JSON, usamos o texto puro se ele existir
+                if (responseText) errorMessage = responseText;
             }
+            throw new Error(errorMessage);
+        }
 
             const data = await response.json();
             localStorage.setItem('token', data.access_token);

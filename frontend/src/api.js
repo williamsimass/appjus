@@ -157,4 +157,17 @@ export const ai = {
             body: JSON.stringify({ content })
         }),
     }
+    
+};
+
+export const notifications = {
+    list: () => apiFetch("/notifications/"), // O backend já deve filtrar as não lidas
+    markAsRead: (id) => apiFetch(`/notifications/${id}/read`, {
+        method: "POST"
+    }),
+    send: (data) => apiFetch("/notifications/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+    }),
 };
