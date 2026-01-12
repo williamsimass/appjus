@@ -20,7 +20,10 @@ export default function ConfiguracoesPage() {
         try {
             const res = await apiFetch('/notifications/', {
                 method: 'POST',
-                body: JSON.stringify(notifForm)
+                headers: {
+                'Content-Type': 'application/json'
+            },
+                body: JSON.stringify(notifForm) 
             })
             if (res.ok) {
                 toast({
@@ -29,11 +32,12 @@ export default function ConfiguracoesPage() {
                 })
                 setNotifForm({ title: '', message: '' })
             } else {
-                throw new Error()
+                const errorData = await res.json().catch(() => ({}));
+            throw new Error(errorData.detail?.[0]?.msg || "Falha ao enviar");
             }
         } catch (error) {
             toast({
-                variant: "destuctive",
+                variant: "destructive",
                 title: "Erro",
                 description: "Falha ao enviar notificação.",
             })
@@ -41,6 +45,7 @@ export default function ConfiguracoesPage() {
             setSending(false)
         }
     }
+    
 
     const getRoleLabel = (role) => {
         if (!role) return 'Usuário'

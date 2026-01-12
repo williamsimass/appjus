@@ -1,3 +1,5 @@
+import tailwindAnimate from "tailwindcss-animate";
+
 /** @type {import('tailwindcss').Config} */
 export default {
     darkMode: ["class"],
@@ -38,7 +40,18 @@ export default {
                 md: `calc(var(--radius) - 2px)`,
                 sm: "calc(var(--radius) - 4px)",
             },
+            // Adicionando keyframes personalizados para garantir que o "Sem notificações" seja suave
+            keyframes: {
+                "fade-in": {
+                    "0%": { opacity: "0", transform: "scale(0.95)" },
+                    "100%": { opacity: "1", transform: "scale(1)" },
+                }
+            },
+            animation: {
+                "fade-in": "fade-in 0.5s ease-out forwards",
+            }
         }
     },
-    plugins: [],
+    // O plugin 'tailwindcss-animate' é o que faz o animate-in funcionar
+    plugins: [tailwindAnimate],
 }
