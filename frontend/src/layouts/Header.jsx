@@ -55,10 +55,6 @@ export function Header() {
                 setRemovingId(null);
             }, 500); // 500ms para coincidir com a duração da animação
 
-            toast({
-                title: "Notificação lida",
-                description: "Removida da sua lista.",
-            });
         }
     } catch (error) {
         console.error("Erro ao marcar como lida", error);
